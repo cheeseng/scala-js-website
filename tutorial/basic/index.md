@@ -392,9 +392,8 @@ this application.
 
 ## <a name="testing"></a> Step 6: Testing
 
-In this section we will show how such an application can be tested using [uTest](http://github.com/lihaoyi/utest), a
-tiny testing framework which compiles to both Scala.js and Scala JVM. As a note aside, this framework is also a good
-choice to test libraries that cross compile. See our [cross compilation guide](../../doc/project/cross-build.html) for
+In this section we will show how such an application can be tested using [ScalaTest](http://www.scalatest.org) and [uTest](http://github.com/lihaoyi/utest), 
+which both compiles to both Scala.js and Scala JVM (cross-compile).  See our [cross compilation guide](../../doc/project/cross-build.html) for
 details.
 
 ### Supporting the DOM
@@ -430,7 +429,61 @@ After reloading, you can invoke `run` successfully:
 Just like other library dependencies, this setting applies transitively: if you depend on a library that depends on the
 DOM, then you depend on the DOM as well.
 
-### Adding uTest
+### Using ScalaTest
+
+Using ScalaTest in Scala.js is not much different than on the JVM.
+You just need to add one sbt setting in the `build.sbt` file.
+For ScalaTest, it is:
+
+{% highlight scala %}
+libraryDependencies += "org.scalatest" %%% "scalatest" % "3.0.0" % "test"
+{% endhighlight %}
+
+We are now ready to add a first simple test suite (`src/test/scala/tutorial/webapp/ScalaTestTutorialTest.scala`):
+
+{% highlight scala %}
+package tutorial.webapp
+
+import org.scalatest._
+
+import org.scalajs.jquery.jQuery
+
+class ScalaTestTutorialTest extends FunSpec {
+
+  // Initialize App
+  TutorialApp.setupUI()
+
+  describe("TutorialApp") {
+    it("should contains 'Hello Word' text in its body") {
+      assert(jQuery("p:contains('Hello World')").length == 1)
+    }
+  }
+}
+{% endhighlight %}
+
+This test uses jQuery to verify that our page contains exactly one `<p>` element which contains the text "Hello World"
+after the UI has been set up.
+
+To run this test, simply invoke the `test` task:
+
+    > test
+    [info] Compiling 1 Scala source to (...)/scalajs-tutorial/target/scala-2.11/test-classes...
+    [info] ScalaTestTutorialTest:
+    [info] TutorialApp
+    [info] - should contains 'Hello Word' text in its body
+    [info] ScalaTest
+    [info] Run completed in 2 seconds, 47 milliseconds.
+    [info] Total number of tests run: 1
+    [info] Suites: completed 1, aborted 0
+    [info] Tests: succeeded 1, failed 0, canceled 0, ignored 0, pending 0
+    [info] All tests passed.
+
+    [success] (...)
+
+We have successfully created a simple test.
+Just like `run`, the `test` task uses Rhino by default, or Node.js/PhantomJS in fastOpt stage.
+
+### Using uTest
 
 Using a testing framework in Scala.js is not much different than on the JVM.
 It typically boils down to two sbt settings in the `build.sbt` file.
@@ -500,7 +553,25 @@ jQuery("""<button type="button">Click me!</button>""")
 This brings another unexpected advantage: We don't need to give it an ID anymore but can directly use the jQuery object
 to install the on-click handler.
 
-We now define the `ButtonClick` test just below the `HelloWorld` test:
+Using ScalaTest, you can define a test like this for button click: 
+
+{% highlight scala %}
+it("should append 'You clicked the button!' text when user click on the 'Click me!' button") {
+  def messageCount =
+    jQuery("p:contains('You clicked the button!')").length
+
+  val button = jQuery("button:contains('Click me!')")
+  assert(button.length == 1)
+  assert(messageCount == 0)
+
+  for (c <- 1 to 5) {
+    button.click()
+    assert(messageCount == c)
+  }
+}
+{% endhighlight %}
+
+Or using uTest, you'll define the `ButtonClick` test just below the `HelloWorld` test:
 
 {% highlight scala %}
 'ButtonClick {
@@ -525,16 +596,25 @@ of messages has increased.
 You can now call the `test` task again:
 
     > test
-    [info] Compiling 1 Scala source to (...)/scalajs-tutorial/target/scala-2.11/test-classes...
+    [info] ScalaTestTutorialTest:
+    [info] TutorialApp
+    [info] - should contains 'Hello Word' text in its body
+    [info] - should append 'You clicked the button!' text when user click on the 'Click me!' button
+    [info] ScalaTest
+    [info] Run completed in 2 seconds, 539 milliseconds.
+    [info] Total number of tests run: 2
+    [info] Suites: completed 1, aborted 0
+    [info] Tests: succeeded 2, failed 0, canceled 0, ignored 0, pending 0
+    [info] All tests passed.
     [info] 1/3     tutorial.webapp.TutorialTest.HelloWorld		Success
     [info] 2/3     tutorial.webapp.TutorialTest.ButtonClick		Success
     [info] 3/3     tutorial.webapp.TutorialTest		Success
+    [info] utest
     [info] -----------------------------------Results-----------------------------------
     [info] tutorial.webapp.TutorialTest		Success
     [info]     HelloWorld		Success
     [info]     ButtonClick		Success
-    [info] Failures:
-    [info]
+    [info] 
     [info] Tests: 3
     [info] Passed: 3
     [info] Failed: 0
